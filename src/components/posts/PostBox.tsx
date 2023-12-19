@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "firebaseApp";
 
-import { useContext } from "react";
+import { useEffect, useContext } from "react";
 import AuthContext from "context/AuthContext";
 
 import { toast } from "react-toastify";
@@ -29,6 +29,10 @@ export default function PostBox({ post }: PostBoxProps) {
     }
   };
 
+  useEffect(() => {
+    console.log("[PostBox] Render!");
+  });
+
   return (
     <div className="post__box" key={post?.id}>
       <Link to={`/posts/${post?.id}`}>
@@ -47,6 +51,13 @@ export default function PostBox({ post }: PostBoxProps) {
             <div className="post__createdAt">{post?.createdAt}</div>
           </div>
           <div className="post__box-content">{post?.content}</div>
+          <div className="post-form__hashtags-outputs">
+            {post?.hashTags?.map((tag, index) => (
+              <span className="post-form__hashtags-tag" key={index}>
+                #{tag}
+              </span>
+            ))}
+          </div>
         </div>
       </Link>
       <div className="post__box-footer">

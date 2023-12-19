@@ -1,11 +1,5 @@
 import { useEffect, useState, useContext } from "react";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  orderBy,
-} from "firebase/firestore";
+import { collection, query, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "firebaseApp";
 
 import PostForm from "components/posts/PostForm";
@@ -23,31 +17,8 @@ export interface PostProps {
   likes?: string[];
   likeCount?: number;
   comments?: any;
+  hashTags?: string[];
 }
-
-// const posts: PostProps[] = [
-//   {
-//     id: "1",
-//     email: "test1@test.com",
-//     content: "내용입니다",
-//     createdAt: "2023-08-30",
-//     uid: "123111",
-//   },
-//   {
-//     id: "2",
-//     email: "test2@test.com",
-//     content: "내용입니다",
-//     createdAt: "2023-08-30",
-//     uid: "123122",
-//   },
-//   {
-//     id: "3",
-//     email: "test3@test.com",
-//     content: "내용입니다",
-//     createdAt: "2023-08-30",
-//     uid: "123133",
-//   },
-// ];
 
 export default function HomePage() {
   const [posts, setPosts] = useState<PostProps[]>([]);
@@ -71,6 +42,10 @@ export default function HomePage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    console.log("[Home] Render!");
+  });
+
   return (
     <div className="home">
       <div className="home__top">
@@ -86,7 +61,7 @@ export default function HomePage() {
       {/* Tweet Post */}
       <div className="post">
         {posts?.length > 0 ? (
-          posts?.map((post) => <PostBox post={post} key={post.id} />)
+          posts.map((post) => <PostBox post={post} key={post.id} />)
         ) : (
           <div className="post__no-posts">
             <div className="post__text">게시글이 없습니다.</div>
