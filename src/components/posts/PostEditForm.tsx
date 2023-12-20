@@ -1,7 +1,15 @@
+import PostHeader from "components/posts/PostHeader";
+
 import { useCallback, useState, useContext, useEffect } from "react";
 import { collection, addDoc, updateDoc, doc, getDoc } from "firebase/firestore";
+import {
+  getDownloadURL,
+  uploadString,
+  ref,
+  deleteObject,
+} from "firebase/storage";
 import { FiImage } from "react-icons/fi";
-import { db } from "firebaseApp";
+import { db, storage } from "firebaseApp";
 
 import { toast } from "react-toastify";
 import AuthContext from "context/AuthContext";
@@ -9,16 +17,36 @@ import AuthContext from "context/AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { PostProps } from "pages/home";
 
+import { v4 as uuidv4 } from "uuid";
+
 export default function PostEidtForm() {
   const params = useParams();
   const [post, setPost] = useState<PostProps | null>(null);
   const [content, setContent] = useState<string>("");
   const [hashTag, setHashTag] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [imageFile, setImageFile] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]); // 성공적으로 생성한 모든 태그들을 담고있음
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const handleFileUpload = () => {};
+  const handleFileUpload = (e: any) => {
+    const {
+      target: { files },
+    } = e;
+
+    console.log("[PostForm]", files);
+    const file = files?.[0];
+    const fileReader = new FileReader();
+    fileReader?.readAsDataURL(file);
+    fileReader.onloadend = (e: any) => {
+      //const { result } = e?.currentTarget;
+      const {
+        currentTarget: { result },
+      } = e;
+      setImageFile(result); // base64 string
+    };
+  };
 
   const getPost = useCallback(async () => {
     if (params.id) {
@@ -28,21 +56,44 @@ export default function PostEidtForm() {
       setPost({ ...(docSnap?.data() as PostProps), id: docSnap.id });
       setContent(docSnap?.data()?.content);
       setTags(docSnap?.data()?.hashTags);
+      setImageFile(docSnap?.data()?.imageUrl);
     }
   }, [params.id]);
 
   const onSubmit = async (e: any) => {
+    setIsSubmitting(true);
+    const key = `${user?.uid}/${uuidv4()}`;
+    const storageRef = ref(storage, key);
     e.preventDefault();
     try {
       if (post) {
+        // 무조건 기존 사진 지우고
+        if (post?.imageUrl) {
+          let imageRef = ref(storage, post?.imageUrl);
+          await deleteObject(imageRef).catch((error) => {
+            console.log(error);
+          });
+        }
+
+        // 새로운 사진 있으면 새롭게 업로드
+        let imageUrl = "";
+        if (imageFile) {
+          const data = await uploadString(storageRef, imageFile, "data_url");
+          imageUrl = await getDownloadURL(data?.ref);
+        }
+
+        // 만약 사진이 아예 없다면 삭제
         const postRef = doc(db, "posts", post?.id);
         await updateDoc(postRef, {
           content: content,
           hashTags: tags,
+          imageUrl: imageUrl,
         });
       }
       navigate(`/posts/${post?.id}`);
       toast.success("게시글을 수정했습니다.");
+      setImageFile(null);
+      setIsSubmitting(false);
       //   추가로직
       //   await addDoc(
       //     // db , collection이름 , 추가할 데이터
@@ -95,12 +146,17 @@ export default function PostEidtForm() {
     }
   };
 
+  const handleDeleteImage = () => {
+    setImageFile(null);
+  };
+
   useEffect(() => {
     if (params.id) getPost();
   }, [getPost, params.id]);
 
   return (
     <div className="post">
+      <PostHeader />
       <form className="post-form" onSubmit={onSubmit}>
         <textarea
           className="post-form__textarea"
@@ -134,17 +190,42 @@ export default function PostEidtForm() {
           />
         </div>
         <div className="post-form__submit-area">
-          <label htmlFor="file-input" className="post-form__file">
-            <FiImage className="post-form__file-icon" />
-          </label>
+          <div className="post-form__image-area">
+            <label htmlFor="file-input" className="post-form__file">
+              <FiImage className="post-form__file-icon" />
+            </label>
+            <input
+              type="file"
+              name="file-input"
+              id="file-input"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            {imageFile && (
+              <div className="post-form__attachment">
+                <img
+                  src={imageFile}
+                  alt="attachment"
+                  width={100}
+                  height={100}
+                />
+                <button
+                  className="post-form__clear-btn"
+                  type="button"
+                  onClick={handleDeleteImage}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
           <input
-            type="file"
-            name="file-input"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="hidden"
+            type="submit"
+            value="수정"
+            className="post-form__submit-btn"
+            disabled={isSubmitting}
           />
-          <input type="submit" value="수정" className="post-form__submit-btn" />
         </div>
       </form>
     </div>

@@ -1,5 +1,6 @@
 import Loader from "components/loader/Loader";
 import PostBox from "components/posts/PostBox";
+import PostHeader from "components/posts/PostHeader";
 import { PostProps } from "pages/home";
 import { useCallback, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -28,11 +29,7 @@ export default function PostDetail() {
 
   return (
     <div className="post">
-      <div className="post__header">
-        <button type="button" onClick={() => navigate(-1)}>
-          <IoIosArrowBack className="post__header-btn" />
-        </button>
-      </div>
+      <PostHeader />
       {post ? <PostBox post={post} /> : <Loader />}
     </div>
   );
