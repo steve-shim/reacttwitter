@@ -1,10 +1,16 @@
 import { PostProps } from "pages/home";
 import { FaUserCircle } from "react-icons/fa";
-import { FaHeart } from "react-icons/fa";
+import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { FaRegComment } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
 
-import { deleteDoc, doc } from "firebase/firestore";
+import {
+  deleteDoc,
+  doc,
+  updateDoc,
+  arrayRemove,
+  arrayUnion,
+} from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
 import { db, storage } from "firebaseApp";
 
@@ -21,6 +27,24 @@ export default function PostBox({ post }: PostBoxProps) {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const imageRef = ref(storage, post?.imageUrl);
+
+  const toggleLike = async () => {
+    const postRef = doc(db, "posts", post.id);
+
+    if (user?.uid && post?.likes?.includes(user?.uid)) {
+      // 사용자가 좋아요를 미리 한 경우 -> 좋아요를 취소한다
+      await updateDoc(postRef, {
+        likes: arrayRemove(user?.uid),
+        likeCount: post?.likeCount ? post?.likeCount - 1 : 0,
+      });
+    } else {
+      // 사용자가 좋아요를 하지 않은 경우 -> 좋아요를 추가한다
+      await updateDoc(postRef, {
+        likes: arrayUnion(user?.uid),
+        likeCount: post?.likeCount ? post?.likeCount + 1 : 1,
+      });
+    }
+  };
 
   const handleDelete = async () => {
     const confirm = window.confirm("해당 게시글을 삭제하시겠습니까?");
@@ -98,8 +122,12 @@ export default function PostBox({ post }: PostBoxProps) {
           </>
         )}
 
-        <button type="button" className="post__likes">
-          <FaHeart />
+        <button type="button" className="post__likes" onClick={toggleLike}>
+          {user && post?.likes?.includes(user.uid) ? (
+            <FaHeart />
+          ) : (
+            <FaRegHeart />
+          )}
           {post?.likeCount || 0}
         </button>
         <button type="button" className="post__comments">
